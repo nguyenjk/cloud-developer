@@ -18,13 +18,48 @@ router.get('/', async (req: Request, res: Response) => {
 
 //@TODO
 //Add an endpoint to GET a specific resource by Primary Key
+router.get('/:id', 
+    requireAuth, 
+    async (req: Request, res: Response) => {
+    let { id } = req.params;
+    if (!id) {
+        res.status(400).send('the id is required');
+    }
+
+    const item = await FeedItem.findByPk(id);
+    
+    if(item && item.url) {
+        item.url = AWS.getGetSignedUrl(item.url);
+        res.status(200).send(item);
+    }
+    else {
+        res.status(404).send('There is no feed with this id ' + id);
+    }
+});
 
 // update a specific resource
 router.patch('/:id', 
     requireAuth, 
     async (req: Request, res: Response) => {
-        //@TODO try it yourself
-        res.send(500).send("not implemented")
+        let { id } = req.params;
+        if (!id) {
+            res.status(400).send('the id is required');
+        }
+        const item = await FeedItem.findByPk(id);
+    
+        if (item && item.url) {
+            const caption = req.body.caption;
+            const fileName = req.body.url;
+
+            let saved_item = caption ? await item.update({ caption: caption }) : item;
+            saved_item = fileName ? await item.update({ url: fileName }) : saved_item;
+        
+            saved_item.url = AWS.getGetSignedUrl(saved_item.url);
+            res.status(200).send(saved_item);
+        }
+        else {
+            res.status(404).send('There is no feed with this id ' + id);
+        }
 });
 
 
