@@ -1,6 +1,7 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
+import fs from 'fs';
 
 (async () => {
 
@@ -28,7 +29,39 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   //   the filtered image file [!!TIP res.sendFile(filteredpath); might be useful]
 
   /**************************************************************************** */
+  app.get("/filteredimage", async (req: Request, res: Response) => {
+    let { image_url } = req.query;
 
+    if ( !image_url ) {
+      return res.status(400)
+                .send(`The image url is required`);
+    }
+    let localSaveImagePath: string = "";
+
+    try 
+    {
+      localSaveImagePath =  await filterImageFromURL(image_url);
+
+      await fs.readFile(localSaveImagePath, function(err,data){
+          if (!err) {
+              res.writeHead(200);
+              res.write(data);
+              res.end();
+          } else {
+              console.log(err);
+          }
+      });
+    }
+    catch(error) {
+      console.log("Error : ", error);
+      res.status(500).send('There is error while processing image.');
+    }
+    finally {
+      if (localSaveImagePath) {
+        deleteLocalFiles([localSaveImagePath]);
+      }
+    }
+  });
   //! END @TODO1
   
   // Root Endpoint
